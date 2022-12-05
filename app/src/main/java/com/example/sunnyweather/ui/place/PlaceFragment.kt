@@ -1,5 +1,6 @@
 package com.example.sunnyweather.ui.place
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -13,12 +14,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.sunnyweather.databinding.FragmentPlaceBinding
 import com.example.sunnyweather.logic.model.Location
 import com.example.sunnyweather.logic.model.Place
+import com.example.sunnyweather.ui.weather.WeatherActivity
 
 class PlaceFragment: Fragment() {
     private var _binding: FragmentPlaceBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel by lazy {
+    val viewModel by lazy {
         ViewModelProvider(this)[PlaceViewModel::class.java]
     }
 
@@ -36,15 +38,23 @@ class PlaceFragment: Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        if(viewModel.isPlaceSaved()){
+            val place = viewModel.getSavedPlace()
+            val intent = Intent(context, WeatherActivity::class.java).apply {
+                    putExtra("location_lng", place.location.lng)
+                    putExtra("location_lat", place.location.lat)
+                    putExtra("place_name", place.name)
+            }
+            startActivity(intent)
+            activity?.finish()
+            return
+        }
+
         val layoutManager = LinearLayoutManager(activity)
         binding.recyclerView.layoutManager = layoutManager
 
-        viewModel.placeList.add(Place("成都", Location("3333.0", "87773.0"),"双流区"))
         adapter = PlaceAdapter(this, viewModel.placeList)
-        binding.recyclerView.visibility = View.VISIBLE
-        binding.bgImageView.visibility = View.GONE
         binding.recyclerView.adapter = adapter
-        Log.d("PlaceFragment", viewModel.placeList.toString())
 
         binding.searchPlaceEdit.addTextChangedListener {
             val content = it.toString()
