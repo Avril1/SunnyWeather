@@ -1,6 +1,8 @@
 package com.example.sunnyweather.ui.weather
 
+import android.content.Context
 import android.graphics.Color
+import android.inputmethodservice.InputMethodService
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -9,15 +11,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.inputmethod.InputMethodManager
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.OnBackPressedDispatcher
 import androidx.annotation.RequiresApi
+import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.ViewCompat.getWindowInsetsController
 import androidx.core.view.WindowCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
 import com.example.sunnyweather.R
 import com.example.sunnyweather.databinding.ActivityWeatherBinding
@@ -29,11 +34,11 @@ import java.util.Locale
 
 class WeatherActivity : AppCompatActivity() {
 
-    private val viewModel by lazy {
+     val viewModel by lazy {
         ViewModelProvider(this)[WeatherViewModel::class.java]
     }
 
-    private lateinit var binding: ActivityWeatherBinding
+    lateinit var binding: ActivityWeatherBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,14 +66,39 @@ class WeatherActivity : AppCompatActivity() {
         viewModel.weatherLiveData.observe(this){
             val weather = it.getOrNull()
             if(weather != null){
-                Log.d("WeatherActivity", "realtime: ${weather.realtime.toString()}, daily: ${weather.daily.toString()}")
-                showWeatherInfo(weather)
+               showWeatherInfo(weather)
             }else{
                 Toast.makeText(this, "无法成功获取天气信息",Toast.LENGTH_SHORT).show()
                 it.exceptionOrNull()?.printStackTrace()
             }
+            binding.swipeRefresh.isRefreshing = false
         }
+
+        binding.swipeRefresh.setColorSchemeResources(com.google.android.material.R.color.design_default_color_primary)
+        refreshWeather()
+        binding.swipeRefresh.setOnRefreshListener {
+            refreshWeather()
+        }
+
+        binding.nowLayout.navBtn.setOnClickListener {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+
+        binding.drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener{
+            override fun onDrawerStateChanged(newState: Int) {}
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
+            override fun onDrawerOpened(drawerView: View) {}
+            //当滑动菜单被隐藏时，同时也要隐藏输入法
+            override fun onDrawerClosed(drawerView: View) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                manager.hideSoftInputFromWindow(drawerView.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+            }
+        })
+    }
+
+    fun refreshWeather(){
         viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        binding.swipeRefresh.isRefreshing = true
     }
 
     private fun showWeatherInfo(weather: Weather){
